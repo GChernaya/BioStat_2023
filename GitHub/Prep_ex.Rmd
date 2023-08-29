@@ -184,6 +184,55 @@ d11 |> left_join(d22, by = c('ID' = 'Ident_code', 'Пол' = 'Пол')) |> group
 
 d11 |> left_join(d22, by = c('ID' = 'Ident_code', 'Пол' = 'Пол')) |> group_by(Пол) |> split(~`Пол`)
 
+# Rowwise() - switching to mode, that works with rows
+
+str(d_1)
+
+d_1 |> mutate(`mean_bas` = mean(c(`Базофилы_E1`, `Базофилы_E2`))) |> select(`Базофилы_E1`, `Базофилы_E2`, `mean_bas`) |> View()
+
+d_1 %>% rowwise() %>% mutate(`mean_bas` = mean(c(`Базофилы_E1`, `Базофилы_E2`))) %>% select(`Базофилы_E1`, `Базофилы_E2`, `mean_bas`) %>% View()
+
 ```
 
+```{r selecting rows}
+# select()
+
+data <- read_tsv("Originals/data_tsv.tsv")
+
+data |> glimpse()
+
+data <- as_tibble(data)
+
+data |> glimpse()
+
+?factor()
+
+#data |>  mutate(factor(`Группа`, levels = c("Группа 1", "Группа 2"), labels = c("Группа 1", "Группа 2"))) -> data
+
+#data |> glimpse()
+
+data %>% select(where(is.numeric))
+data %>% select('Пол')
+data %>% select(!'Пол')
+
+data %>% select(`Группа`, where(is.numeric) & function(x) mean(x, na.rm = TRUE) > 10)
+
+data %>% select(where(is.numeric) & where(function(x) sd(x, na.rm = TRUE) > 1))
+
+data %>% select(function(x) sd(x, na.rm = TRUE) > 1)
+
+
+data %>% select(`Возраст`, function(x) anyNA(x))
+
+data %>% select(function(x) any(str_detect(x, "Жен")))
+
+
+data %>% select(`Группа`, function(x) !is.factor(x))
+
+data %>% select(`Группа`, (function(x) is.factor(x)) | where(function(x) is.numeric(x)))
+
+data %>% select(function(x) sd(x, na.rm = TRUE) > 1)
+
+
+```
 
