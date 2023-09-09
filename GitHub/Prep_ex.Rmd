@@ -18,16 +18,18 @@ library(readr)
 library(openxlsx)
 library(psych)
 library(tibble)
+library(stringi)
 ```
 
 # Reading data 
+setwd("C:/Users/gpche/BioStat_2023")
 
 
 ```{r data_tsv}
-orig_data <- read_tsv("Originals/data_tsv.tsv")
+orig_data <- read_tsv("C:/Users/gpche/BioStat_2023/Originals/data_tsv.tsv")
 summary(orig_data)
 
-excel_data <- read.xlsx("Originals/data_excel.xlsx", sheet = "data_csv2")
+excel_data <- read.xlsx("C:/Users/gpche/BioStat_2023/Originals/data_excel.xlsx", sheet = "data_csv2")
 
 #haven::read_spss(), haven::read_sas()#
 
@@ -43,10 +45,10 @@ excel_data <- read.xlsx("Originals/data_excel.xlsx", sheet = "data_csv2")
 # Writing data 
 
 ```{r}
-write_csv(orig_data, "Raw/orig_data.csv")#
-write_csv2(orig_data, "Raw/orig_data_delim2.csv")#
-write_tsv(orig_data, "Raw/orig_data_tabdelim.tsv")#
-write_excel_csv(orig_data, "Raw/orig_data_for_excel.csv")#
+write_csv(orig_data, "C:/Users/gpche/BioStat_2023/Raw/orig_data.csv")#
+write_csv2(orig_data, "C:/Users/gpche/BioStat_2023/Raw/orig_data_delim2.csv")#
+write_tsv(orig_data, "C:/Users/gpche/BioStat_2023/Raw/orig_data_tabdelim.tsv")#
+write_excel_csv(orig_data, "C:/Users/gpche/BioStat_2023/Raw/orig_data_for_excel.csv")#
 
 openxlsx::write.xlsx(data, "data_excel1.xlsx", colNames = TRUE, rowNames = TRUE, append = TRUE)#
 
@@ -99,7 +101,7 @@ v4 <- c(92.11, 56, 47.89, 62.96, 47.41, 37.05, 73.96, 53, 52.37, 85.23)
   
 sd(v4)/sqrt(length(v4))  
 
-num_data <- read_rds("Originals/numeric_data.rds")
+num_data <- read_rds("C:/Users/gpche/BioStat_2023/Originals/numeric_data.rds")
 
 psych::describe(num_data, na.rm = TRUE, skew = FALSE, ranges = TRUE)
 
@@ -203,7 +205,7 @@ d_1 %>% rowwise() %>% mutate(`mean_bas` = mean(c(`Базофилы_E1`, `Баз�
 ```{r selecting rows}
 # Select
 
-data <- read_tsv("Originals/data_tsv.tsv")
+data <- read_tsv("C:/Users/gpche/BioStat_2023/Originals/data_tsv.tsv")
 
 data |> glimpse()
 
@@ -346,12 +348,28 @@ data %>% group_by(`Группа`) %>%
 
 ```{r}
 #Rename
+data %>% rename(`Эритроциты_V1` = `Эритроциты_E1`, `Эритроциты_V2` = `Эритроциты_E2`) %>% select(contains("Эритроциты"))
 
+data %>% rename_with(function(x) x %>% stri_replace_all_regex(c("_E1", "_E2"), c("_Визит1", "_Визит2"), vectorize_all = FALSE))
 
+data %>% rename_with(.cols = where(is.numeric), .fn = function(x) str_c(x, "_numeric")) %>% glimpse()
 
+new_name <- "yashperitsa"
 
+data %>% rename(!! new_name := `Группа`)
 
 ```
 
+```{r}
+# arrange
+
+data %>% arrange(`Возраст`)
+data %>% arrange(`Группа крови`) %>% view()
+data %>% arrange(desc(`Возраст`)) %>% view()
+data %>% arrange(desc(`Возраст`), `Рост`)
+
+data %>% group_by(`Группа`) %>% arrange(`Группа крови`, .by_group = TRUE) %>% view()
+
+```
 
 
