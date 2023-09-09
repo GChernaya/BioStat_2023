@@ -2,7 +2,12 @@
 title: "Untitled"
 author: "Galina Chernaya"
 date: '`r Sys.Date()`'
-output: html_document
+output: 
+  word_document:
+  reference_docx: "Preparation_example.docx"
+  toc: yes
+  toc_depth: 3
+toc_title: "Оглавление"
 ---
 
 ```{r setup, include=FALSE}
@@ -24,34 +29,35 @@ summary(orig_data)
 
 excel_data <- read.xlsx("Originals/data_excel.xlsx", sheet = "data_csv2")
 
-#haven::read_spss(), haven::read_sas()
+#haven::read_spss(), haven::read_sas()#
 
 #Очень редко, но приходится читать данные, которые выгружены напрямую из SPSS или SAS.#
 
-haven::write_sav()
+#haven::write_sav()#
 
-#For people, who work with R the best format for data is .rds
+#For people, who work with R the best format for data is .rds#
 
-readr::read_rds()
+#readr::read_rds()#
 
 ```
 # Writing data 
 
-```{r data_csv}
+```{r}
+write_csv(orig_data, "Raw/orig_data.csv")#
+write_csv2(orig_data, "Raw/orig_data_delim2.csv")#
+write_tsv(orig_data, "Raw/orig_data_tabdelim.tsv")#
+write_excel_csv(orig_data, "Raw/orig_data_for_excel.csv")#
 
-write_csv(orig_data, "Raw/orig_data.csv")
-write_csv2(orig_data, "Raw/orig_data_delim2.csv")
-write_tsv(orig_data, "Raw/orig_data_tabdelim.tsv")
-write_excel_csv(orig_data, "Raw/orig_data_for_excel.csv")
-
-write.xlsx(data, "data_excel.xlsx", sheetName = "data_2", col.names = TRUE, row.names = TRUE, append = TRUE)
+openxlsx::write.xlsx(data, "data_excel1.xlsx", colNames = TRUE, rowNames = TRUE, append = TRUE)#
 
 #haven::write_sas() - for SAS and SPSS
 
 #.rds
 
-readr::write_rds()
+#readr::write_rds()
 ```
+
+
 ```{r base statistics, echo=FALSE}
 mean(c(-19, -9, 19, 5, -14, 0, 34, -8, 34, 24, -11, 8, 33, 12, -6))
 
@@ -97,8 +103,8 @@ num_data <- read_rds("Originals/numeric_data.rds")
 
 psych::describe(num_data, na.rm = TRUE, skew = FALSE, ranges = TRUE)
 
-t <- read_rds("Originals/factor_data.rds")
-prop.table(table(orig_data$Группа, orig_data$`Группа крови`))
+
+
 ```
 
 ```
@@ -112,7 +118,7 @@ tibble(`var 1` = 1:10, `var 2` = `var 1` * 100)
 
 tibble(var_first = 1:10, var_second = ifelse(var_first < 5, var_first + 100, var_first))
 
-tibble(`var 2` = 10:1, `var 3` = `var 1` - 10)
+tibble(`var 2` = 10:1, `var 3` = `var 2` - 10)
 
 tib |> View()
 
@@ -195,7 +201,7 @@ d_1 %>% rowwise() %>% mutate(`mean_bas` = mean(c(`Базофилы_E1`, `Баз�
 ```
 
 ```{r selecting rows}
-# select()
+# Select
 
 data <- read_tsv("Originals/data_tsv.tsv")
 
@@ -204,12 +210,6 @@ data |> glimpse()
 data <- as_tibble(data)
 
 data |> glimpse()
-
-?factor()
-
-#data |>  mutate(factor(`Группа`, levels = c("Группа 1", "Группа 2"), labels = c("Группа 1", "Группа 2"))) -> data
-
-#data |> glimpse()
 
 data %>% select(where(is.numeric))
 data %>% select('Пол')
@@ -222,17 +222,136 @@ data %>% select(where(is.numeric) & where(function(x) sd(x, na.rm = TRUE) > 1))
 data %>% select(function(x) sd(x, na.rm = TRUE) > 1)
 
 
-data %>% select(`Возраст`, function(x) anyNA(x))
+## contains() and etc
 
-data %>% select(function(x) any(str_detect(x, "Жен")))
+data %>% select(contains("_E1"))
+data %>% select(matches("_E\\d{1}"))
+data %>% select(starts_with("Э"))
+data %>% select(ends_with("E2")) 
+
+data %>% select(ends_with("E2")) %>% colnames() -> v
+
+data %>% select(all_of(v))
+
+data %>% select(starts_with("Э")) %>% select(any_of(v))
+
+## where()
+
+data %>% select(where(is.numeric)) %>% 
+  select(where(function(x) sd(x, na.rm = TRUE) > 2 & mean(x, na.rm = TRUE) < 10))
+  
+data %>% select(where(is.numeric)) %>% 
+  select(where(function(x) sd(x, na.rm = TRUE) > 2 | mean(x, na.rm = TRUE) < 10 | median(x, na.rm = TRUE) > 5))
+
+## everything() - for changing the order
+
+data %>% select('Пол', 'Группа крови', everything())
+
+## Changing column names
+
+data %>% select('Пол','Базофилы_Визит_1' = 'Базофилы_E1', 'Базофилы_Визит_2' = 'Базофилы_E2')
+
+```
 
 
-data %>% select(`Группа`, function(x) !is.factor(x))
 
-data %>% select(`Группа`, (function(x) is.factor(x)) | where(function(x) is.numeric(x)))
 
-data %>% select(function(x) sd(x, na.rm = TRUE) > 1)
+```{r}
+#Selecting rows
+
+## slice
+
+data %>% slice(1:10)
+
+data %>% slice(1:80 * -1)
+
+data %>% slice_head(n = 7)
+
+data %>% slice_head(prop = 0.1) #первые 10% строк#
+
+data %>% slice_tail(prop = 0.05) #5% строк с конца#
+
+data %>% slice_sample(prop = 0.15) #случайные 15% строк#
+
+data %>% slice_min(`Возраст`)
+
+data %>% slice_max(`Возраст`)
+
+## filter
+
+data %>% filter(`Пол` == "Женский")
+
+data %>% filter(`Группа` != "Группа 1" & `Группа крови` %in% c("O (I)", "A (II)") & `Пол` == "Женский") #%in% - для качественных переменных, between - для количественных#
+
+data %>% filter(between(`Возраст`, 30, 35)) #минимум и максимум включительно#
+
+data %>% filter(near(`Гемоглобин_E1`, 12.0, tol = 3.0))
+
+data %>% filter(!near(`Гемоглобин_E1`, 12.0, tol = 3.0))
+
+data %>% filter(if_all(.cols = contains("_E"), .fns = function(x) x > 1.5)) #все переменные, содержащие в названии "Базофилы", имели значение строго больше 1.5.#
+
+data %>% filter(if_any(.cols = contains("_E"), .fns = function(x) x > 1.5)) #хотя бы одна из этих переменных имела значение строго больше 1.5#
+
+## filtering by groups
+
+data %>% group_by(`Группа`) %>% filter(`Пол` == "Женский")
+
 
 
 ```
+
+```{r}
+# Mutate
+
+data %>% select(starts_with("Эр")) 
+
+data %>% mutate(Эритроциты_среднее = mean(Эритроциты_E1, Эритроциты_E2, trim = 0.1)) %>% select(`Эритроциты_среднее`, everything()) 
+
+tibble(var1 = rnorm(1:10), var2 = ifelse(var1 > 0, var1 * 10, var1 * -10)) %>%
+   mutate(var_sum = var1 + var2, 
+   var_dif = var1 - var2, 
+   var_mult = var1*var2,
+   var_div = var2 / var1,
+   var_log = log(var2), 
+   var_log1p = log(var2)
+   )
+   
+data %>% mutate(Возрастная_группа = case_when(Возраст < 30 ~ "< 30",
+                                              between(Возраст, 30, 40) ~ "30 - 40",
+                                              Возраст > 40 ~ "> 40")) %>%
+        select(`Возрастная_группа`, `Возраст`, everything())
+        
+data %>% mutate(`Группа крови` = `Группа крови` %>% replace_na("No_data"))
+
+data %>% mutate(`Группа крови` = `Группа крови` %>% na_if("B (III)"))
+
+data %>% mutate(`Группа` = NULL)
+
+data %>% mutate(across(where(is.numeric), function(x) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE))) #функция нормализации#
+
+data %>% mutate(across(!contains("E1"), function(x) str_c(x, " + некая строка")))
+
+data %>% mutate(across(function(x) any(near(x, 0.5, tol = 0.1)), function(x) x + 1000))
+
+data %>% mutate(across(!contains("E1") & !c(`Группа`, `Возраст`) & !where(is.factor), function(x) x ^ 2), across(contains("E2"), function(x) x * 100))
+
+data %>% rowwise() %>% mutate(`Базофилы_среднее` = mean(c_across(contains("Базоф")))) %>% select(contains("Базоф"))
+
+data %>% group_by(`Группа`) %>%
+    mutate(across(contains("Базофилы"), function(x) x - mean(x, na.rm = TRUE))) %>%       ungroup() %>%
+    select(`Группа`, contains("Базофилы"))
+    
+```
+
+```{r}
+#Rename
+
+
+
+
+
+```
+
+
 
