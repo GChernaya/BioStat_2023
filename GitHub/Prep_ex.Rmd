@@ -19,6 +19,7 @@ library(openxlsx)
 library(psych)
 library(tibble)
 library(stringi)
+library(flextable)
 ```
 
 # Reading data 
@@ -413,5 +414,58 @@ statistics <- list(
 data %>% select(`Группа`, where(is.numeric)) %>% group_by(`Группа`) %>%
     summarize(across(where(is.numeric), statistics)) %>% pivot_longer(!`Группа`) %>% separate(name, into = c("Переменная", "Статистика"), sep = "_") %>% rename(`Значение` = `value`)
 
+data %>% select(`Группа`,`Группа крови`) %>% 
+  mutate(`Группа крови` = `Группа крови` %>% as.character() %>% replace_na("Нет данных") %>% as.factor()) %>% 
+  count(`Группа`,`Группа крови`) %>%
+  group_by(`Группа`) %>%
+  mutate(`Процент по группе` = (n / sum(n)) %>% round(4) %>% `*`(100) %>% str_c("%")) %>%
+  ungroup() %>%
+  mutate(`Процент по выборке` = (n / sum(n)) %>% round(4) %>% `*`(100) %>% str_c("%")) 
+  
+```
+
+```{r}
+# Printing tables
+
+statistics <- list(
+      `Количество субъектов` = ~length(.x) %>% as.character(),
+      `Количество (есть данные)` = ~sum(!is.na(.x)) %>% as.character(),
+      `Нет данных` = ~sum(is.na(.x)) %>% as.character(),
+      `Ср. знач.` = ~ifelse(sum(!is.na(.x)) == 0, "Н/П*", mean(.x, na.rm = TRUE) %>% round(2) %>% as.character()),
+      `Станд. отклон.` = ~ifelse(sum(!is.na(.x)) < 3, "Н/П*", sd(.x, na.rm = TRUE) %>% round(2) %>% as.character()),
+      `95% ДИ для среднего` = ~sd(.x, na.rm = TRUE) %>% round(2) %>% as.character(),
+      `мин. - макс.` = ~ifelse(sum(!is.na(.x)) == 0, "Н/П*", paste0(min(.x, na.rm = TRUE) %>% round(2), " - ", max(.x, na.rm = TRUE) %>% round(2))),
+      `Медиана` = ~ifelse(sum(!is.na(.x)) == 0, "Н/П*", median(.x, na.rm = TRUE) %>% round(2) %>% as.character()),
+      `Q1 - Q3` = ~ifelse(sum(!is.na(.x)) == 0, "Н/П*", paste0(quantile(.x, 0.25, na.rm = TRUE) %>% round(2), " - ", quantile(.x, 0.75, na.rm = TRUE) %>% round(2)))
+)
+
+data %>% select(`Группа`, where(is.numeric)) %>% group_by(`Группа`) %>%
+    summarize(across(where(is.numeric), statistics)) %>% pivot_longer(!`Группа`) %>% separate(name, into = c("Переменная", "Статистика"), sep = "_") %>% rename(`Значение` = `value`) %>% flextable() %>% theme_box() %>% merge_v(c("Группа", "Переменная"))
+    
+tibble(var1 = c("p-value", "0.001"), var2 = c("p-value", "0.05")) %>% 
+ flextable() %>% theme_box() %>% merge_h(i = 1) %>% align(align = "center", part = "all")
+
+tibble(var1 = c("p-value", "0.001"), var2 = c("p-value", "0.05")) %>% 
+ flextable() %>% theme_box() %>% align(align = "center", part = "all") %>% align(i = ~ str_detect(`var1`, "p-value"), align = "left") %>%
+ align(i = ~ str_detect(`var2`, "0.05"), align = "right") %>% width(width = 2)
+ 
+ 
+tibble(var1 = c("p-value", "0.001"), var2 = c("p-value", "0.05")) %>% 
+ flextable() %>% theme_box() %>%  align(align = "center", part = "all") %>% align(i = ~ str_detect(`var1`, "p-value"), align = "left") %>%
+ align(i = ~ str_detect(`var2`, "0.0"), align = "right") %>% 
+ bold(i = ~ str_detect(`var1`, "p-value")) %>% 
+ italic(i = ~ str_detect(`var2`, "0.0")) %>%
+ width(width = 2)  
+ 
+ is_pvalue_sign <- function(x) {
+ x %>% str_remove("<") %>% as.numeric() %>% `<=`(0.05)
+}
+
+tibble("p-value" = c("<0.001", "0.38", "0.64", "0.05", "0.005")) %>% flextable() %>% theme_box() %>% color(i = ~ is_pvalue_sign(`p-value`), color = "orange")
+
+tibble("p-value" = c("<0.001", "0.38", "0.64", "0.05", "0.005")) %>% flextable() %>% theme_box() %>% bg(i = ~ is_pvalue_sign(`p-value`), bg = "orange")
+
+## colors: http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf
+ 
 ```
 
